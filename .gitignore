@@ -1,0 +1,4 @@
+.vscode/
+
+*.mexw64
+*.pdb
