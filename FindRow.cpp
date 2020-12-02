@@ -10,7 +10,7 @@
 
 std::vector<std::vector<real_T>> vector;
 
-bool matrixCached = false;
+bool cached = false;
 
 int_T *port0Dimensions = nullptr;
 int_T *port1Dimensions = nullptr;
@@ -77,37 +77,34 @@ static void mdlStart(SimStruct *S)
 #define MDL_UPDATE
 static void mdlUpdate(SimStruct *S, int_T tid) {
 
-	if (!matrixCached) {
+	if (!cached) {
 
 		for (size_t i = 0; i < port0Dimensions[0]; i++) {
 			std::vector<real_T> thisVector;
 			for (size_t j = 0; j < port0Dimensions[1]; j++) {
-				real_T value = *ssGetInputPortRealSignalPtrs(S, 0)[IX(i, j)];
-				thisVector.push_back(value);
+				thisVector.push_back(*ssGetInputPortRealSignalPtrs(S, 0)[IX(i, j)]);
 			}
 			vector.push_back(thisVector);
 		}
 
-		matrixCached = true;
+		cached = true;
 	}
 
 	std::vector<real_T> thisVector;
 	for (size_t i = 0; i < port1Dimensions[1]; i++) {
-		real_T value = *ssGetInputPortRealSignalPtrs(S, 1)[i];
-		thisVector.push_back(value);
+		thisVector.push_back(*ssGetInputPortRealSignalPtrs(S, 1)[i]);
 	}
 
-	auto it = std::upper_bound(vector.begin(), vector.end(), thisVector);
-	if (it == vector.end()) {
-		*ssGetOutputPortRealSignal(S, 0) = -1;
-	} else {
-		*ssGetOutputPortRealSignal(S, 0) = it - vector.begin() + 1;
+	auto index = std::upper_bound(vector.begin(), vector.end(), thisVector);
+	if (index == vector.end()) {
+		index = vector.end() - 1;
 	}
+	*ssGetOutputPortRealSignal(S, 0) = index - vector.begin() + 1;
 }
 
 static void mdlTerminate(SimStruct *S) {
 	vector.clear();
-	matrixCached = false;
+	cached = false;
 	port0Dimensions = nullptr;
 	port1Dimensions = nullptr;
 }
