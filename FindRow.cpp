@@ -8,22 +8,13 @@
 
 #include "simstruc.h"
 
-std::vector<std::vector<real_T>> vector;
-
-bool cached = false;
-
-int_T *port0Dimensions = nullptr;
-int_T *port1Dimensions = nullptr;
-
 #define MDL_SET_INPUT_PORT_DIMENSION_INFO
-void mdlSetInputPortDimensionInfo(SimStruct *S, int_T port, const DimsInfo_T *info) {
+static void mdlSetInputPortDimensionInfo(SimStruct *S, int_T port, const DimsInfo_T *info) {
 	ssSetInputPortMatrixDimensions(S, port, info->dims[0], info->dims[1]);
 }
 
 #define MDL_SET_OUTPUT_PORT_DIMENSION_INFO
-void mdlSetOutputPortDimensionInfo(SimStruct *S, int_T port, const DimsInfo_T *info) {
-	ssSetInputPortMatrixDimensions(S, port, 1, 1);
-}
+static void mdlSetOutputPortDimensionInfo(SimStruct *S, int_T port, const DimsInfo_T *info) {}
 
 static void mdlInitializeSizes(SimStruct *S) {
 
@@ -62,11 +53,10 @@ static void mdlOutputs(SimStruct *S, int_T id) {}
 #define MDL_START
 static void mdlStart(SimStruct *S)
 {
-	port0Dimensions = ssGetInputPortDimensions(S, 0);
-	port1Dimensions = ssGetInputPortDimensions(S, 1);
+	int_T *port0Dimensions = ssGetInputPortDimensions(S, 0);
+	int_T *port1Dimensions = ssGetInputPortDimensions(S, 1);
 
 	if (port0Dimensions[0] < 2 || 
-		port0Dimensions[1] < 2 ||
 		port1Dimensions[0] != 1 ||
 		port1Dimensions[1] != port0Dimensions[1])
 	{
@@ -76,6 +66,13 @@ static void mdlStart(SimStruct *S)
 
 #define MDL_UPDATE
 static void mdlUpdate(SimStruct *S, int_T tid) {
+
+	static int_T *port0Dimensions = ssGetInputPortDimensions(S, 0);
+	static int_T *port1Dimensions = ssGetInputPortDimensions(S, 1);
+	
+	static std::vector<std::vector<real_T>> vector;
+	
+	static bool cached = false;
 
 	if (!cached) {
 
@@ -95,19 +92,16 @@ static void mdlUpdate(SimStruct *S, int_T tid) {
 		thisVector.push_back(*ssGetInputPortRealSignalPtrs(S, 1)[i]);
 	}
 
-	auto index = std::upper_bound(vector.begin(), vector.end(), thisVector);
-	if (index == vector.end()) {
-		index = vector.end() - 1;
+	auto it = std::upper_bound(vector.begin(), vector.end(), thisVector);
+
+	if (it == vector.end()) {
+		std::advance(it, -1);
 	}
-	*ssGetOutputPortRealSignal(S, 0) = index - vector.begin() + 1;
+
+	*ssGetOutputPortRealSignal(S, 0) = it - vector.begin();
 }
 
-static void mdlTerminate(SimStruct *S) {
-	vector.clear();
-	cached = false;
-	port0Dimensions = nullptr;
-	port1Dimensions = nullptr;
-}
+static void mdlTerminate(SimStruct *S) {}
 
 #ifdef MATLAB_MEX_FILE
 #include "simulink.c"

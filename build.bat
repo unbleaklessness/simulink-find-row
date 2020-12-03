@@ -1,1 +1,1 @@
-mex FindRow.cpp -output FindRow.mexw64
+mex FindRow.cpp -output FindRow
